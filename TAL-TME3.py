@@ -5,7 +5,7 @@
 
 ### Chargement du corpus movies1000 (lecture de fichiers)
 
-# In[95]:
+# In[1]:
 
 
 
@@ -30,7 +30,7 @@ def getAllLabels(docs):
 
 ### Création des stopwords
 
-# In[127]:
+# In[2]:
 
 from nltk import download
 
@@ -40,7 +40,7 @@ def nltkDownload():
     download()
 
 
-# In[126]:
+# In[3]:
 
 from nltk.corpus import stopwords
 
@@ -54,23 +54,27 @@ def makeNltkStopWords(languages=['french', 'english', 'german', 'spanish']):
 
 ### Vectorisation et normalisation
 
-# In[107]:
+# In[4]:
 
 import sklearn.feature_extraction.text as txt
     
-def fromAllDocsToBow(all_docs, strip_accents=u'ascii', lowercase=True,                      preprocessor=None, stop_words=None, token_pattern=u"[\\w']+\\w\\b",                      analyzer=u'word', max_df=1.0, max_features=20000, vocabulary=None,                      binary=True, ngram_range=(1, 1), min_df=0.0025):
+def fromAllDocsToBow(all_docs, strip_accents=u'ascii', lowercase=True,                      preprocessor=None, stop_words=None, token_pattern=u"[\\w']+\\w\\b",                      analyzer=u'word', max_df=1.0, max_features=20000, vocabulary=None,                      binary=False, ngram_range=(1, 1), min_df=1,                      normalize=True):
     """ Depuis un liste de documents, génère une matrice sparse contenant les occurences des mots.
         A chaque mot est associé un identifiant grace à une table de hashage.
     """
-    vec_param = txt.CountVectorizer(all_docs)
-#strip_accents, lowercase, preprocessor, stop_words, token_pattern, vocabulary, binary, ngram_range)#, min_df)
-    # analyzer, max_df, max_features
-    bow = vec_param.fit_transform(all_docs)
-    bow = bow.tocsr() # pour pouvoir print
+    vec_param = txt.CountVectorizer(all_docs, strip_accents=strip_accents, lowercase=lowercase, preprocessor=preprocessor,                             stop_words=stop_words, token_pattern=token_pattern, analyzer=analyzer, max_df=max_df,                             max_features=max_features, vocabulary=vocabulary, binary=binary, ngram_range=ngram_range,                             min_df=min_df)
+    bow = fromVectoBow(all_docs, vec_param, normalize)
     return bow, vec_param
 
+def fromVectoBow(all_docs, vec, normalize=True):
+    bow = vec.fit_transform(all_docs)
+    bow = bow.tocsr() # permet de print
+    if normalize:
+        bow = normalizeBow(bow)
+    return bow
+
 def normalizeBow(bow):
-    """ La somme de toutes les occurences des mots devient égale à 1
+    """ TFIDF : La somme de toutes les occurences des mots devient égale à 1
     """
     transformer = txt.TfidfTransformer(use_idf=False, smooth_idf=False)
     bow_norm = transformer.fit_transform(bow)
@@ -79,13 +83,13 @@ def normalizeBow(bow):
 
 ### Transformation inverse
 
-# In[114]:
+# In[5]:
 
 import scipy.sparse as sp
 
 def fromArgsToWords(args, vec):
     """ A partir d'une liste d'arguments obtenus par l'extraction des coefficients de notre modèle
-        et d'une fonction de vectorisation, rend une liste de mots.
+        (liste d'index de mots dans bow) et d'une fonction de vectorisation, rend une liste de mots.
     """
     nb = len(args)
     matrix = sp.coo_matrix((np.ones(nb), (np.zeros(nb),args)))
@@ -102,7 +106,7 @@ def fromBowToWords(bow, vec):
 
 ### Construction d'un classifier
 
-# In[100]:
+# In[6]:
 
 import numpy as np
 import sklearn.naive_bayes as nb
@@ -132,11 +136,11 @@ def predict(clf, docs):
 
 ### Mots les plus discriminants
 
-# In[115]:
+# In[7]:
 
 def mostDescriminantWords(clf, vec, nb_words=100):
     """ Testé avec svm.LinearSVC() """
-    args_sort = clf.coef_.reshape(clf.coef_.shape[1]).argsort()
+    args_sort = clf.coef_.reshape(clf.coef_.shape[1]).argsort() # index des mots triés par coef
     args_pos = args_sort[:nb_words]
     words_pos = fromArgsToWords(args_pos, vec)
     args_neg = args_sort[-nb_words:]
@@ -146,7 +150,7 @@ def mostDescriminantWords(clf, vec, nb_words=100):
 
 ### Main()
 
-# In[119]:
+# In[8]:
 
 # Chargement du corpus movies1000
 path = '/Users/Tamazy/Dropbox/_Docs/UPMC/TAL/TME3/movies1000'
@@ -160,7 +164,7 @@ print all_docs[0][:100]
 print "Le label associé :", all_labels[0]
 
 
-# In[123]:
+# In[9]:
 
 # Paramétrage
 languages = ['french', 'english', 'german', 'spanish']
@@ -172,13 +176,13 @@ token_pattern = u"[\\w']+\\w\\b" #
 max_df = 1.0 #default
 min_df = 5. * 1./len(all_docs) # on enleve les mots qui apparaissent moins de 5 fois
 max_features = 20000 # nombre de mots au total dans notre matrice sparse
-binary = True # presence coding or counting
+binary = False # presence coding or counting
 strip_accents = u'ascii' #  {‘ascii’, ‘unicode’, None}
 preprocessor=None
 vocabulary=None
 
 # Vectorisation
-bow, vec = fromAllDocsToBow(all_docs, strip_accents, lowercase, preprocessor,                             stop_words, token_pattern, analyzer, max_df, max_features,                             vocabulary, binary, ngram_range, min_df)
+bow, vec = fromAllDocsToBow(all_docs, strip_accents=strip_accents, lowercase=lowercase, preprocessor=preprocessor,                             stop_words=stop_words, token_pattern=token_pattern, analyzer=analyzer, max_df=max_df,                             max_features=max_features, vocabulary=vocabulary, binary=binary, ngram_range=ngram_range,                             min_df=min_df)
 
 print "Mots vectorisés du second document :"
 print bow[1]
@@ -188,7 +192,7 @@ print bow[1]
 # /!\ en fonction du document
 
 
-# In[121]:
+# In[10]:
 
 # Normalisation
 bow = normalizeBow(bow)
@@ -197,7 +201,7 @@ print "Après normalisation :"
 print bow[1]
 
 
-# In[125]:
+# In[11]:
 
 # Modèles
 clf = svm.LinearSVC() # SVM
@@ -212,7 +216,7 @@ print "Moyenne :", mean
 print "Ecart type :", std
 
 
-# In[117]:
+# In[12]:
 
 # Mots les plus discriminants
 clf = fit(clf, bow, all_labels) # afin de pouvoir récupérer les coefficients du clf
@@ -222,12 +226,19 @@ print "bad] Pour décrire les mauvais films: ", words_pos
 print "good] Pour décrire les bons films: ", words_neg
 
 
-# In[47]:
+# In[13]:
 
+comment = """Automata' (2014) is a critically underrated and atmospheric science- fiction thriller in the same vein as 'I Robot' and 'Blade Runner'. It boasts excellent visual effects, as well as an engaging and intelligent story. While it borrows from other science fiction it does so successfully, especially the atmospheric and decaying world we're thrusts into from the beginning.
+The story centers around Antonio Banderas's character, Jacq Vaucan - a world-weary insurance agent for a robotics corporation whose job is to investigate robots violating their protocols which are one: harming any form of life, and two: they can neither repair themselves nor alter another robot in any fashion. On the trail of a robot Vaucan discovers a robot stealing parts in an apparent attempt to alter itself. This leads him to the clock master - a fixer who may have just succeeded the second protocol.
+Automata is a throwback to thoughtful science fiction. It's not for the feint of heart but if you're engaged and buy into the world and the premise then you'll be rewarded. The film surprised me in a lot of ways
+especially for such a relatively small budget but imagery is fantastic and the effects are mostly practical, and built with little computer generated imagery save for some backgrounds and action scenes which make it that much more realistic.
+It's slower and probably has less action but if we're comparing it to what it will inevitably be compared to, 'I Robot', Automata is a better movie. More thoughtful, grittier and executed a whole lot better visually. It's not a perfect flick by any means but it's worth watching and deciding for yourself."""
 
+com_bow = fromVectoBow([comment], vec, normalize=True)
+print com_bow
+print fromBowToWords(com_bow, vec)
 
-
-# In[ ]:
-
+pred = predict(clf, com_bow)
+print "Classe du commentaire :", pred
 
 
