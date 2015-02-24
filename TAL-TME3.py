@@ -228,17 +228,34 @@ print "good] Pour décrire les bons films: ", words_neg
 
 # In[13]:
 
+all_docs = getAllDocs(docs)
+
 comment = """Automata' (2014) is a critically underrated and atmospheric science- fiction thriller in the same vein as 'I Robot' and 'Blade Runner'. It boasts excellent visual effects, as well as an engaging and intelligent story. While it borrows from other science fiction it does so successfully, especially the atmospheric and decaying world we're thrusts into from the beginning.
 The story centers around Antonio Banderas's character, Jacq Vaucan - a world-weary insurance agent for a robotics corporation whose job is to investigate robots violating their protocols which are one: harming any form of life, and two: they can neither repair themselves nor alter another robot in any fashion. On the trail of a robot Vaucan discovers a robot stealing parts in an apparent attempt to alter itself. This leads him to the clock master - a fixer who may have just succeeded the second protocol.
 Automata is a throwback to thoughtful science fiction. It's not for the feint of heart but if you're engaged and buy into the world and the premise then you'll be rewarded. The film surprised me in a lot of ways
 especially for such a relatively small budget but imagery is fantastic and the effects are mostly practical, and built with little computer generated imagery save for some backgrounds and action scenes which make it that much more realistic.
 It's slower and probably has less action but if we're comparing it to what it will inevitably be compared to, 'I Robot', Automata is a better movie. More thoughtful, grittier and executed a whole lot better visually. It's not a perfect flick by any means but it's worth watching and deciding for yourself."""
 
-com_bow = fromVectoBow([comment], vec, normalize=True)
-print com_bow
-print fromBowToWords(com_bow, vec)
+comment_bad = """attempts"""
 
-pred = predict(clf, com_bow)
-print "Classe du commentaire :", pred
+comment_good = """enjoyable"""
+
+all_docs.append(comment)
+all_docs.append(comment_bad)
+all_docs.append(comment_good)
+len_docs = len(all_docs)
+
+bow, vec = fromAllDocsToBow(all_docs, strip_accents=strip_accents, lowercase=lowercase, preprocessor=preprocessor,                             stop_words=stop_words, token_pattern=token_pattern, analyzer=analyzer, max_df=max_df,                             max_features=max_features, vocabulary=vocabulary, binary=binary, ngram_range=ngram_range,                             min_df=min_df)
+
+clf = fit(clf, bow[:len_docs-3], all_labels)
+
+pred = predict(clf, bow[len_docs-3])
+print "Classe du commentaire Automata (bon) :", pred
+
+pred = predict(clf, bow[len_docs-2])
+print "Classe du commentaire mauvais :", pred
+
+pred = predict(clf, bow[len_docs-1])
+print "Classe du commentaire bon :", pred
 
 
